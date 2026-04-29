@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Model Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      background: #0f172a;
+      color: white;
+      font-family: Arial;
+      padding: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 15px;
+    }
+
+    h2 { color: #38bdf8; }
+  </style>
+</head>
+
+<body>
+
+<h1>🧠 AI Model Dashboard</h1>
+
+<div class="grid">
+
+  <div class="card">
+    <h2>Predicted Temperature</h2>
+    <div id="temp">--</div>
+  </div>
+
+  <div class="card">
+    <h2>Predicted Humidity</h2>
+    <div id="hum">--</div>
+  </div>
+
+  <div class="card">
+    <h2>Predicted PM2.5</h2>
+    <div id="pm25">--</div>
+  </div>
+
+</div>
+
+<script>
+async function fetchPredictions() {
+  const res = await fetch("http://127.0.0.1:5000/predict");
+  const data = await res.json();
+
+  document.getElementById("temp").innerText = data.temperature.toFixed(2);
+  document.getElementById("hum").innerText = data.humidity.toFixed(2);
+  document.getElementById("pm25").innerText = data.pm25.toFixed(2);
+}
+
+setInterval(fetchPredictions, 3000);
+fetchPredictions();
+</script>
+
+</body>
+</html>

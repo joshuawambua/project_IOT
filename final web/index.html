@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0f1e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <title>EcoSphere Air Quality | Smart IoT Dashboard</title>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background: #0a0f1e;
+      color: #eef2ff;
+    }
+
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10, 15, 30, 0.95);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid #1e293b;
+      padding: 0.8rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #7dd3fc, #38bdf8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropbtn {
+      background: #1e293b;
+      color: white;
+      padding: 0.6rem 1.5rem;
+      border-radius: 2rem;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      background: #0f172a;
+      min-width: 220px;
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px black;
+      border: 1px solid #1e293b;
+      z-index: 1000;
+    }
+
+    .dropdown-content a {
+      color: #cbd5e1;
+      padding: 0.8rem 1.2rem;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .dropdown-content a:hover {
+      background: #1e293b;
+      color: #38bdf8;
+    }
+
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+
+    .page {
+      display: none;
+      padding: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(10px);
+      border-radius: 1.5rem;
+      border: 1px solid #1e293b;
+      padding: 1.5rem;
+    }
+
+    .sensor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .sensor-card {
+      background: #0f172a;
+      border-radius: 1.2rem;
+      padding: 1rem;
+      text-align: center;
+      border-left: 4px solid #38bdf8;
+    }
+
+    .sensor-card.critical {
+      border-left-color: #ef4444;
+      animation: pulseRed 1s infinite;
+    }
+
+    .sensor-card.warning {
+      border-left-color: #f59e0b;
+    }
+
+    @keyframes pulseRed {
+      0%, 100% { box-shadow: 0 0 0 0 #ef4444; }
+      50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.3); }
+    }
+
+    .sensor-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    .actuator-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background: #1a1f2e;
+      border-radius: 1rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 30px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #334155;
+      transition: 0.3s;
+      border-radius: 30px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 24px;
+      width: 24px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #38bdf8;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(30px);
+    }
+
+    .alert-item {
+      background: #1e1b2e;
+      border-left: 4px solid #ef4444;
+      padding: 0.8rem;
+      border-radius: 0.8rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .chart-container {
+      margin-top: 1rem;
+      height: 250px;
+    }
+
+    .prediction-box {
+      text-align: center;
+      padding: 20px;
+      background: #0f172a;
+      border-radius: 12px;
+    }
+
+    .prediction-number {
+      font-size: 48px;
+      font-weight: bold;
+      font-family: monospace;
+      color: #38bdf8;
+    }
+
+    .actual-number {
+      font-size: 36px;
+      font-weight: bold;
+      font-family: monospace;
+      color: #10b981;
+    }
+
+    .error-number {
+      font-size: 20px;
+      font-weight: bold;
+      font-family: monospace;
+      color: #f59e0b;
+    }
+
+    .auth-container {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #0a0f1e, #0f172a);
+    }
+
+    .auth-card {
+      background: #0f172a;
+      padding: 2rem;
+      border-radius: 2rem;
+      width: 100%;
+      max-width: 400px;
+      border: 1px solid #1e293b;
+    }
+
+    .auth-input {
+      width: 100%;
+      padding: 0.8rem;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 0.8rem;
+      color: white;
+      margin-bottom: 1rem;
+    }
+
+    .auth-btn {
+      width: 100%;
+      padding: 0.8rem;
+      background: linear-gradient(135deg, #38bdf8, #0284c7);
+      border: none;
+      border-radius: 0.8rem;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .hidden { display: none; }
+    button { cursor: pointer; }
+
+    .stat-card {
+      background: #0f172a;
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #38bdf8;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 5px;
+    }
+
+    @media (max-width: 768px) {
+      .page { padding: 1rem; }
+      .sensor-value { font-size: 1.2rem; }
+      .prediction-number { font-size: 32px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- AUTH SECTION -->
+<div id="authContainer" class="auth-container">
+  <div class="auth-card">
+    <h2 style="margin-bottom: 1.5rem; text-align: center;">🌿 EcoSphere Air</h2>
+    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+      <button id="showLoginBtn" style="flex:1; background: #38bdf8; border: none; padding: 0.5rem; border-radius: 0.5rem;">Login</button>
+      <button id="showSignupBtn" style="flex:1; background: #1e293b; border: none; padding: 0.5rem; border-radius: 0.5rem;">Sign Up</button>
+    </div>
+    <div id="loginForm">
+      <input type="email" id="loginEmail" class="auth-input" placeholder="Email">
+      <input type="password" id="loginPassword" class="auth-input" placeholder="Password">
+      <div id="loginError" style="color: #ef4444; font-size: 0.8rem; margin-bottom: 1rem;"></div>
+      <button class="auth-btn" onclick="handleLogin()">Login</button>
+    </div>
+    <div id="signupForm" class="hidden">
+      <input type="email" id="signupEmail" class="auth-input" placeholder="Email">
+      <input type="password" id="signupPassword" class="auth-input" placeholder="Password (min 6 chars)">
+      <div id="signupError" style="color: #ef4444; font-size: 0.8rem; margin-bottom: 1rem;"></div>
+      <button class="auth-btn" onclick="handleSignup()">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN DASHBOARD -->
+<div id="dashboard" class="hidden">
+  <nav class="navbar">
+    <div class="logo"><i class="fas fa-leaf"></i> EcoSphere Air</div>
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <span id="lastUpdateTime" style="font-size: 0.7rem; color: #94a3b8;"></span>
+      <span id="userEmail" style="font-size: 0.9rem;"></span>
+      <div class="dropdown">
+        <button class="dropbtn"><i class="fas fa-bars"></i> Menu</button>
+        <div class="dropdown-content">
+          <a href="#" data-page="dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+          <a href="#" data-page="analytics"><i class="fas fa-chart-line"></i> ML Predictions</a>
+          <a href="#" data-page="alerts"><i class="fas fa-bell"></i> Alert History</a>
+          <a href="#" data-page="control"><i class="fas fa-microchip"></i> Control Panel</a>
+        </div>
+      </div>
+      <button onclick="handleLogout()" style="background: #dc2626; border: none; padding: 0.5rem 1rem; border-radius: 2rem; color: white;"><i class="fas fa-sign-out-alt"></i></button>
+    </div>
+  </nav>
+
+  <!-- DASHBOARD PAGE -->
+  <div id="page-dashboard" class="page active">
+    <div class="sensor-grid" id="sensorGrid"></div>
+    <div class="card">
+      <h3><i class="fas fa-chart-line"></i> Live Trends</h3>
+      <div class="chart-container">
+        <canvas id="liveChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ML PREDICTIONS PAGE -->
+  <div id="page-analytics" class="page">
+    <div class="card">
+      <h3><i class="fas fa-robot"></i> XGBoost PM2.5 Predictions</h3>
+      <div class="prediction-box" style="margin-top: 1rem;">
+        <div class="stat-label" style="margin-bottom: 10px;">XGBoost Predicted PM2.5</div>
+        <div class="prediction-number" id="predictedPM25">--</div>
+        <div class="stat-label" style="margin-top: 20px; margin-bottom: 10px;">Actual PM2.5 from Sensor</div>
+        <div class="actual-number" id="actualPM25">--</div>
+        <div style="margin-top: 20px;">
+          <span class="stat-label">Prediction Error: </span>
+          <span class="error-number" id="error">--</span>
+        </div>
+        <div style="margin-top: 10px;">
+          <span class="stat-label">Air Quality Status: </span>
+          <span id="status" class="good"></span>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px;">
+        <div class="stat-card">
+          <div class="stat-value" id="r2">--</div>
+          <div class="stat-label">R Squared Score</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="mae">--</div>
+          <div class="stat-label">Mean Absolute Error</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="rmse">--</div>
+          <div class="stat-label">RMSE</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="accuracy">--</div>
+          <div class="stat-label">Prediction Accuracy</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERTS PAGE -->
+  <div id="page-alerts" class="page">
+    <div class="card">
+      <h3><i class="fas fa-exclamation-triangle"></i> Alert History</h3>
+      <div id="alertsHistoryList" style="max-height: 500px; overflow-y: auto;"></div>
+    </div>
+  </div>
+
+  <!-- CONTROL PANEL PAGE -->
+  <div id="page-control" class="page">
+    <div class="card">
+      <h3><i class="fas fa-toggle-on"></i> Actuator Control System</h3>
+
+      <div style="margin: 1rem 0; padding: 1rem; background: #7c2d1220; border-radius: 1rem; border: 1px solid #f59e0b;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span><i class="fas fa-star-of-life"></i> MASTER OVERRIDE</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="masterOverrideToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #f59e0b;">When ON: Direct control overrides Auto Mode and Alerts</div>
+      </div>
+
+      <div style="margin: 1rem 0; padding: 1rem; background: #1e293b; border-radius: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span><i class="fas fa-brain"></i> Auto Mode</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="autoModeToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #94a3b8;">When ON: Actuators trigger automatically during alerts</div>
+      </div>
+
+      <div id="actuatorsPanel">
+        <div class="actuator-row">
+          <div><i class="fas fa-fan"></i> Motor (GPIO 15) - Exhaust Fan</div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="motorToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="actuator-row">
+          <div><i class="fas fa-lightbulb"></i> LED (GPIO 2) - Warning Light</div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="ledToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="actuator-row">
+          <div><i class="fas fa-bell"></i> Buzzer (GPIO 4) - Alarm</div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="buzzerToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div id="actuatorStatus" style="margin-top: 1rem; padding: 0.8rem; background: #0f172a; border-radius: 0.8rem; font-size: 0.8rem;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ========== FIREBASE CONFIG ==========
+  const firebaseConfig = {
+    apiKey: "AIzaSyDtRt9ojUqjJX9ItczqH8ZaouFsSCwyhCQ",
+    authDomain: "ecosphere-434df.firebaseapp.com",
+    databaseURL: "https://ecosphere-434df-default-rtdb.firebaseio.com",
+    projectId: "ecosphere-434df",
+    storageBucket: "ecosphere-434df.appspot.com",
+    messagingSenderId: "337466379916",
+    appId: "1:337466379916:web:42541d8d9e5884a8e8f5a9"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  // Global variables
+  let currentUser = null;
+  let liveChart = null;
+  let lastNotifiedValues = { mq7: 0, pm25: 0 };
+
+  const thresholds = {
+    pm25: 1100, pm10: 1100, mq7: 1500, mq2: 1300, mq8: 1000, tempHigh: 30, tempLow: 10
+  };
+
+  let autoMode = true;
+  let masterOverride = false;
+
+  // ========== NOTIFICATION ==========
+  function sendNotification(title, body, tag = 'alert') {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, { body: body, tag: tag });
+    }
+  }
+
+  function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+
+  // ========== AUTH FUNCTIONS ==========
+  window.handleLogin = async () => {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+    } catch (error) {
+      document.getElementById('loginError').innerText = error.message;
+    }
+  };
+
+  window.handleSignup = async () => {
+    const email = document.getElementById('signupEmail').value;
+    const password = document.getElementById('signupPassword').value;
+    try {
+      await auth.createUserWithEmailAndPassword(email, password);
+    } catch (error) {
+      document.getElementById('signupError').innerText = error.message;
+    }
+  };
+
+  window.handleLogout = () => auth.signOut();
+
+  document.getElementById('showLoginBtn')?.addEventListener('click', () => {
+    document.getElementById('loginForm').classList.remove('hidden');
+    document.getElementById('signupForm').classList.add('hidden');
+  });
+  document.getElementById('showSignupBtn')?.addEventListener('click', () => {
+    document.getElementById('loginForm').classList.add('hidden');
+    document.getElementById('signupForm').classList.remove('hidden');
+  });
+
+  // ========== PAGE NAVIGATION ==========
+  document.querySelectorAll('.dropdown-content a').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const page = link.dataset.page;
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(`page-${page}`).classList.add('active');
+    });
+  });
+
+  // ========== ACTUATOR CONTROL ==========
+  function initActuatorControls() {
+    db.ref('actuators/autoMode').on('value', snap => {
+      autoMode = snap.val() === true;
+      document.getElementById('autoModeToggle').checked = autoMode;
+    });
+
+    db.ref('actuators/masterOverride').on('value', snap => {
+      masterOverride = snap.val() === true;
+      document.getElementById('masterOverrideToggle').checked = masterOverride;
+    });
+
+    ['motor', 'led', 'buzzer'].forEach(act => {
+      db.ref(`actuators/${act}`).on('value', snap => {
+        document.getElementById(`${act}Toggle`).checked = snap.val() === 'ON';
+      });
+    });
+
+    document.getElementById('motorToggle')?.addEventListener('change', (e) => {
+      db.ref('actuators/motor').set(e.target.checked ? 'ON' : 'OFF');
+    });
+    document.getElementById('ledToggle')?.addEventListener('change', (e) => {
+      db.ref('actuators/led').set(e.target.checked ? 'ON' : 'OFF');
+    });
+    document.getElementById('buzzerToggle')?.addEventListener('change', (e) => {
+      db.ref('actuators/buzzer').set(e.target.checked ? 'ON' : 'OFF');
+    });
+    document.getElementById('autoModeToggle')?.addEventListener('change', (e) => {
+      db.ref('actuators/autoMode').set(e.target.checked);
+    });
+    document.getElementById('masterOverrideToggle')?.addEventListener('change', (e) => {
+      db.ref('actuators/masterOverride').set(e.target.checked);
+    });
+
+    setInterval(() => {
+      const statusDiv = document.getElementById('actuatorStatus');
+      if (statusDiv) {
+        if (masterOverride) statusDiv.innerHTML = '🔒 MASTER OVERRIDE: Direct control active';
+        else if (autoMode) statusDiv.innerHTML = '🤖 AUTO MODE: Actuators respond to alerts';
+        else statusDiv.innerHTML = '👆 MANUAL MODE: Use toggles to control';
+      }
+    }, 1000);
+  }
+
+  // ========== DASHBOARD RENDER ==========
+  function renderSensors(data) {
+    const grid = document.getElementById('sensorGrid');
+    if (!grid) return;
+
+    const sensors = [
+      { label: '🌡️ Temperature', value: data.temperature?.toFixed(1), unit: '°C', alert: data.temperature > thresholds.tempHigh || data.temperature < thresholds.tempLow },
+      { label: '💧 Humidity', value: data.humidity?.toFixed(0), unit: '%', alert: false },
+      { label: '🌫️ PM2.5', value: data.pm25?.toFixed(0), unit: 'µg/m³', alert: data.pm25 > thresholds.pm25 },
+      { label: '🏭 PM10', value: data.pm10?.toFixed(0), unit: 'µg/m³', alert: data.pm10 > thresholds.pm10 },
+      { label: '💨 CO (MQ7)', value: data.mq7_adc, unit: 'ADC', alert: data.mq7_adc > thresholds.mq7, critical: true },
+      { label: '🔥 Gas (MQ2)', value: data.mq2_adc, unit: 'ADC', alert: data.mq2_adc > thresholds.mq2 },
+      { label: '⚡ H₂ (MQ8)', value: data.mq8_adc, unit: 'ADC', alert: data.mq8_adc > thresholds.mq8 }
+    ];
+
+    grid.innerHTML = sensors.map(s => `
+      <div class="sensor-card ${s.critical ? 'critical' : (s.alert ? 'warning' : '')}">
+        <div>${s.label}</div>
+        <div class="sensor-value" style="color: ${s.alert ? '#ef4444' : '#38bdf8'}">${s.value ?? '--'} <span style="font-size: 0.8rem;">${s.unit}</span></div>
+      </div>
+    `).join('');
+
+    if (data.mq7_adc > thresholds.mq7 && data.mq7_adc !== lastNotifiedValues.mq7) {
+      sendNotification('⚠️ CRITICAL ALERT', `CO detected! Value: ${data.mq7_adc} ADC. Evacuate!`, 'co-alert');
+      lastNotifiedValues.mq7 = data.mq7_adc;
+    }
+    if (data.pm25 > thresholds.pm25 && data.pm25 !== lastNotifiedValues.pm25) {
+      sendNotification('⚠️ HIGH PM ALERT', `PM2.5: ${data.pm25} µg/m³`, 'pm-alert');
+      lastNotifiedValues.pm25 = data.pm25;
+    }
+  }
+
+  // ========== CHART ==========
+  function initChart() {
+    const ctx = document.getElementById('liveChart')?.getContext('2d');
+    if (!ctx) return;
+    liveChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: [], datasets: [
+        { label: 'PM2.5 (µg/m³)', data: [], borderColor: '#f59e0b', tension: 0.3, fill: false },
+        { label: 'CO (MQ7 ADC)', data: [], borderColor: '#ef4444', tension: 0.3, fill: false },
+        { label: 'Temperature (°C)', data: [], borderColor: '#38bdf8', tension: 0.3, fill: false }
+      ]},
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+
+  function updateChart(sensorData) {
+    if (!liveChart) return;
+    const time = new Date(sensorData.timestamp * 1000).toLocaleTimeString();
+    liveChart.data.labels.push(time);
+    liveChart.data.datasets[0].data.push(sensorData.pm25 || 0);
+    liveChart.data.datasets[1].data.push(sensorData.mq7_adc || 0);
+    liveChart.data.datasets[2].data.push(sensorData.temperature || 0);
+    if (liveChart.data.labels.length > 30) {
+      liveChart.data.labels.shift();
+      liveChart.data.datasets.forEach(d => d.data.shift());
+    }
+    liveChart.update();
+  }
+
+  // ========== XGBOOST PREDICTIONS ==========
+  function loadModelMetrics() {
+    fetch('pm25_results.json')
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('r2').innerHTML = data.r2_test?.toFixed(3) || '--';
+        document.getElementById('mae').innerHTML = data.mae?.toFixed(2) || '--';
+        document.getElementById('rmse').innerHTML = data.rmse?.toFixed(2) || '--';
+        const accuracy = (1 - (data.mae || 0) / 200) * 100;
+        document.getElementById('accuracy').innerHTML = accuracy.toFixed(1) + '%';
+      })
+      .catch(err => console.error('Model metrics not found', err));
+  }
+
+  function listenForPredictions() {
+    db.ref('pm25_predictions/latest').on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        document.getElementById('predictedPM25').innerHTML = data.predicted?.toFixed(1) || '--';
+        document.getElementById('actualPM25').innerHTML = data.actual?.toFixed(1) || '--';
+        document.getElementById('error').innerHTML = data.error ? `${data.error.toFixed(1)} µg/m³ (${data.error_percent?.toFixed(1)}%)` : '--';
+        const actual = data.actual || 0;
+        const statusElem = document.getElementById('status');
+        if (actual <= 50) statusElem.innerHTML = 'GOOD';
+        else if (actual <= 100) statusElem.innerHTML = 'MODERATE';
+        else if (actual <= 150) statusElem.innerHTML = 'UNHEALTHY FOR SENSITIVE GROUPS';
+        else statusElem.innerHTML = 'UNHEALTHY';
+      }
+    });
+  }
+
+  // ========== ALERTS HISTORY - FIXED ==========
+  function loadAlertsHistory() {
+    const container = document.getElementById('alertsHistoryList');
+    if (!container) return;
+
+    container.innerHTML = '<div style="text-align: center; padding: 20px;">Loading alerts...</div>';
+
+    // Get all alerts from the entire alerts node
+    db.ref('air_quality/alerts').once('value', (snapshot) => {
+      const allAlerts = [];
+
+      snapshot.forEach((yearNode) => {
+        yearNode.forEach((monthNode) => {
+          monthNode.forEach((dayNode) => {
+            dayNode.forEach((alertNode) => {
+              const alertData = alertNode.val();
+              if (alertData && alertData.timestamp) {
+                allAlerts.push({
+                  ...alertData,
+                  date: new Date(alertData.timestamp * 1000)
+                });
+              }
+            });
+          });
+        });
+      });
+
+      allAlerts.sort((a, b) => b.timestamp - a.timestamp);
+      const recentAlerts = allAlerts.slice(0, 50);
+
+      if (recentAlerts.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 20px;">No alerts recorded</div>';
+        return;
+      }
+
+      container.innerHTML = recentAlerts.map(alert => `
+        <div class="alert-item">
+          <strong>${alert.type || 'Alert'}</strong>
+          <span style="float: right; font-size: 0.7rem; color: #94a3b8;">${alert.date.toLocaleString()}</span><br>
+          ${alert.message || ''}<br>
+          ${alert.value ? `<span style="font-size: 0.8rem;">Value: ${alert.value}</span>` : ''}
+          ${alert.pm25 ? `<span style="font-size: 0.8rem;">PM2.5: ${alert.pm25} µg/m³</span>` : ''}
+        </div>
+      `).join('');
+    }).catch(error => {
+      console.error('Error loading alerts:', error);
+      container.innerHTML = '<div style="text-align: center; padding: 20px;">Error loading alerts</div>';
+    });
+  }
+
+  // Listen for new alerts in real-time
+  function listenForNewAlerts() {
+    db.ref('air_quality/alerts').on('child_added', () => {
+      loadAlertsHistory();
+    });
+  }
+
+  // ========== SENSOR LISTENER ==========
+  function startSensorListener() {
+    db.ref('air_quality/live').on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data && data.timestamp && data.quality === 0) {
+        const sensorData = {
+          timestamp: data.timestamp,
+          temperature: data.temperature,
+          humidity: data.humidity,
+          pm25: data.pm25,
+          pm10: data.pm10,
+          mq2_adc: data.mq2_adc,
+          mq7_adc: data.mq7_adc,
+          mq8_adc: data.mq8_adc
+        };
+        renderSensors(sensorData);
+        updateChart(sensorData);
+        document.getElementById('lastUpdateTime').innerHTML = `<i class="fas fa-clock"></i> ${new Date(sensorData.timestamp * 1000).toLocaleTimeString()}`;
+      }
+    });
+  }
+
+  // ========== INITIALIZATION ==========
+  function initDashboard() {
+    initChart();
+    initActuatorControls();
+    startSensorListener();
+    loadAlertsHistory();
+    loadModelMetrics();
+    listenForPredictions();
+    listenForNewAlerts();  // Real-time alert listener
+    requestNotificationPermission();
+    setInterval(loadAlertsHistory, 30000);
+  }
+
+  // ========== AUTH STATE ==========
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      document.getElementById('authContainer').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      document.getElementById('userEmail').innerHTML = `<i class="fas fa-user"></i> ${user.email.split('@')[0]}`;
+      initDashboard();
+    } else {
+      document.getElementById('authContainer').classList.remove('hidden');
+      document.getElementById('dashboard').classList.add('hidden');
+    }
+  });
+</script>
+</body>
+</html>

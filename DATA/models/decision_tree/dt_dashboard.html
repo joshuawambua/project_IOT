@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Decision Tree Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      background: #0f172a;
+      color: white;
+      font-family: Arial;
+      padding: 20px;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 15px;
+      margin-bottom: 20px;
+    }
+
+    h2 { color: #38bdf8; }
+  </style>
+</head>
+
+<body>
+
+<h1>🌳 Decision Tree Model Dashboard</h1>
+
+<div class="card">
+  <h2>Model Performance</h2>
+  <p>MAE: <span id="mae">--</span></p>
+  <p>RMSE: <span id="rmse">--</span></p>
+</div>
+
+<div class="card">
+  <h2>Actual vs Predicted PM2.5</h2>
+  <canvas id="chart"></canvas>
+</div>
+
+<script>
+async function loadData() {
+  const res = await fetch("dt_results.json");
+  const data = await res.json();
+
+  document.getElementById("mae").innerText = data.mae.toFixed(2);
+  document.getElementById("rmse").innerText = data.rmse.toFixed(2);
+
+  const ctx = document.getElementById("chart").getContext("2d");
+
+  new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: data.actual_pm25.slice(0,100).map((_, i) => i),
+      datasets: [
+        {
+          label: "Actual",
+          data: data.actual_pm25.slice(0,100)
+        },
+        {
+          label: "Predicted",
+          data: data.pred_pm25.slice(0,100)
+        }
+      ]
+    }
+  });
+}
+
+loadData();
+</script>
+
+</body>
+</html>

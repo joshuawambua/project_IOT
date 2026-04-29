@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PM2.5 Prediction Dashboard - XGBoost Regression</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0a0f1e;
+            color: #eef2ff;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+        .card h3 {
+            color: #38bdf8;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #38bdf8;
+            font-family: monospace;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 5px;
+        }
+        .prediction-box {
+            text-align: center;
+            padding: 25px;
+            background: #0f172a;
+            border-radius: 12px;
+        }
+        .prediction-number {
+            font-size: 64px;
+            font-weight: bold;
+            font-family: monospace;
+            color: #38bdf8;
+        }
+        .actual-number {
+            font-size: 48px;
+            font-weight: bold;
+            font-family: monospace;
+            color: #10b981;
+        }
+        .error-number {
+            font-size: 24px;
+            font-weight: bold;
+            font-family: monospace;
+            color: #f59e0b;
+        }
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .sensor-item {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .sensor-value {
+            font-size: 20px;
+            font-weight: bold;
+            font-family: monospace;
+            margin-top: 5px;
+        }
+        .sensor-label {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        table {
+            width: 100%;
+            font-family: monospace;
+            font-size: 12px;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+        th {
+            color: #94a3b8;
+        }
+        .good {
+            color: #10b981;
+        }
+        .warning {
+            color: #f59e0b;
+        }
+        .danger {
+            color: #ef4444;
+        }
+        .refresh-note {
+            text-align: center;
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PM2.5 Prediction Dashboard</h1>
+        <div class="subtitle">XGBoost Regression Model - Predicted vs Actual PM2.5 (micrograms per cubic meter)</div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="r2">--</div>
+                <div class="stat-label">R Squared Score</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="mae">--</div>
+                <div class="stat-label">Mean Absolute Error</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="rmse">--</div>
+                <div class="stat-label">RMSE</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="accuracy">--</div>
+                <div class="stat-label">Prediction Accuracy</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Current PM2.5 Prediction</h3>
+            <div class="prediction-box">
+                <div class="stat-label" style="margin-bottom: 10px;">XGBoost Predicted PM2.5</div>
+                <div class="prediction-number" id="predictedPM25">--</div>
+                <div class="stat-label" style="margin-top: 20px; margin-bottom: 10px;">Actual PM2.5 from Sensor</div>
+                <div class="actual-number" id="actualPM25">--</div>
+                <div style="margin-top: 20px;">
+                    <span class="stat-label">Prediction Error: </span>
+                    <span class="error-number" id="error">--</span>
+                </div>
+                <div style="margin-top: 10px;">
+                    <span class="stat-label">Air Quality Status: </span>
+                    <span id="status" class="good"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Sensor Inputs to XGBoost Model</h3>
+            <div class="sensor-grid">
+                <div class="sensor-item">
+                    <div class="sensor-label">Temperature (Celsius)</div>
+                    <div class="sensor-value" id="temp">--</div>
+                </div>
+                <div class="sensor-item">
+                    <div class="sensor-label">Humidity (Percent)</div>
+                    <div class="sensor-value" id="hum">--</div>
+                </div>
+                <div class="sensor-item">
+                    <div class="sensor-label">PM10 (micrograms/m3)</div>
+                    <div class="sensor-value" id="pm10">--</div>
+                </div>
+                <div class="sensor-item">
+                    <div class="sensor-label">MQ2 ADC (Gas)</div>
+                    <div class="sensor-value" id="mq2">--</div>
+                </div>
+                <div class="sensor-item">
+                    <div class="sensor-label">MQ7 ADC (CO)</div>
+                    <div class="sensor-value" id="mq7">--</div>
+                </div>
+                <div class="sensor-item">
+                    <div class="sensor-label">MQ8 ADC (H2)</div>
+                    <div class="sensor-value" id="mq8">--</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Prediction History</h3>
+            <div style="max-height: 300px; overflow-y: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Predicted PM2.5</th>
+                            <th>Actual PM2.5</th>
+                            <th>Error</th>
+                            <th>Accuracy</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr><td colspan="5">Loading predictions...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="refresh-note">Data updates automatically every 60 seconds from Firebase</div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDtRt9ojUqjJX9ItczqH8ZaouFsSCwyhCQ",
+            authDomain: "ecosphere-434df.firebaseapp.com",
+            databaseURL: "https://ecosphere-434df-default-rtdb.firebaseio.com",
+            projectId: "ecosphere-434df",
+            storageBucket: "ecosphere-434df.appspot.com",
+            messagingSenderId: "337466379916",
+            appId: "1:337466379916:web:42541d8d9e5884a8e8f5a9"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Load model statistics from local JSON file
+        fetch('pm25_results.json')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Model not trained yet. Run python train_regression_model.py');
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('r2').innerHTML = data.r2_test.toFixed(3);
+                document.getElementById('mae').innerHTML = data.mae.toFixed(2);
+                document.getElementById('rmse').innerHTML = data.rmse.toFixed(2);
+                const accuracy = (1 - data.mae / 200) * 100;
+                document.getElementById('accuracy').innerHTML = accuracy.toFixed(1) + '%';
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('r2').innerHTML = 'Error';
+                document.getElementById('mae').innerHTML = 'Run training first';
+            });
+
+        // Get the latest prediction from Firebase
+        db.ref('pm25_predictions/latest').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                document.getElementById('predictedPM25').innerHTML = data.predicted.toFixed(1);
+                document.getElementById('actualPM25').innerHTML = data.actual.toFixed(1);
+                document.getElementById('error').innerHTML = data.error.toFixed(1) + ' micrograms/m3 (' + data.error_percent.toFixed(1) + '%)';
+
+                // Update air quality status
+                const actual = data.actual;
+                const statusElem = document.getElementById('status');
+                if (actual <= 50) {
+                    statusElem.innerHTML = 'GOOD';
+                    statusElem.className = 'good';
+                } else if (actual <= 100) {
+                    statusElem.innerHTML = 'MODERATE';
+                    statusElem.className = 'warning';
+                } else if (actual <= 150) {
+                    statusElem.innerHTML = 'UNHEALTHY FOR SENSITIVE GROUPS';
+                    statusElem.className = 'warning';
+                } else {
+                    statusElem.innerHTML = 'UNHEALTHY';
+                    statusElem.className = 'danger';
+                }
+            } else {
+                document.getElementById('predictedPM25').innerHTML = '--';
+                document.getElementById('actualPM25').innerHTML = '--';
+                document.getElementById('error').innerHTML = 'No prediction yet';
+            }
+        });
+
+        // Get current sensor readings
+        db.ref('air_quality/live').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                document.getElementById('temp').innerHTML = data.temperature?.toFixed(1) || '--';
+                document.getElementById('hum').innerHTML = data.humidity?.toFixed(1) || '--';
+                document.getElementById('pm10').innerHTML = data.pm10?.toFixed(0) || '--';
+                document.getElementById('mq2').innerHTML = data.mq2_adc || '--';
+                document.getElementById('mq7').innerHTML = data.mq7_adc || '--';
+                document.getElementById('mq8').innerHTML = data.mq8_adc || '--';
+            }
+        });
+
+        // Load prediction history for today
+        const today = new Date();
+        const historyPath = `pm25_predictions/history/${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
+
+        db.ref(historyPath).on('value', (snapshot) => {
+            const history = [];
+            snapshot.forEach(child => {
+                history.push(child.val());
+            });
+
+            history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            const recent = history.slice(0, 15);
+
+            const tbody = document.getElementById('historyBody');
+            if (recent.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">No predictions yet. Start the predictor service.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = recent.map(item => {
+                const accuracy = item.actual > 0 ? (1 - item.error / item.actual) * 100 : 100;
+                return `
+                    <tr>
+                        <td>${new Date(item.timestamp).toLocaleTimeString()}</td>
+                        <td>${item.predicted.toFixed(1)}</td>
+                        <td>${item.actual.toFixed(1)}</td>
+                        <td>${item.error.toFixed(1)}</td>
+                        <td>${accuracy.toFixed(1)}%</td>
+                    </tr>
+                `;
+            }).join('');
+        });
+    </script>
+</body>
+</html>

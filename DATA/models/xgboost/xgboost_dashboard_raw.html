@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>XGBoost Raw Outputs</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: 'Courier New', monospace; background: #0a0f1e; color: #eef2ff; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { text-align: center; font-size: 20px; }
+        .card { background: #1e293b; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .raw-value { font-family: monospace; font-size: 18px; color: #38bdf8; }
+        .label { color: #94a3b8; font-size: 12px; }
+        .probability-bar { background: #334155; height: 20px; border-radius: 4px; margin: 5px 0; overflow: hidden; }
+        .prob-fill { background: #38bdf8; height: 100%; text-align: right; padding-right: 5px; font-size: 11px; line-height: 20px; }
+        table { width: 100%; font-family: monospace; font-size: 12px; border-collapse: collapse; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #334155; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>XGBoost Model - Raw Numerical Outputs</h1>
+
+        <div class="card">
+            <h3>Raw Prediction Outputs</h3>
+            <div id="rawOutputs">
+                <div class="label">Predicted Quality Code (0 or 2)</div>
+                <div class="raw-value" id="predCode">--</div>
+
+                <div class="label" style="margin-top: 15px;">Confidence Score (0 to 1)</div>
+                <div class="raw-value" id="confidenceScore">--</div>
+
+                <div class="label" style="margin-top: 15px;">Confidence Percentage</div>
+                <div class="raw-value" id="confidencePercent">--</div>
+
+                <div class="label" style="margin-top: 15px;">Probability Class 0 (GOOD)</div>
+                <div class="probability-bar"><div class="prob-fill" id="prob0Fill" style="width: 0%">0%</div></div>
+                <div class="raw-value" id="prob0">--</div>
+
+                <div class="label" style="margin-top: 15px;">Probability Class 2 (MODERATE)</div>
+                <div class="probability-bar"><div class="prob-fill" id="prob2Fill" style="width: 0%">0%</div></div>
+                <div class="raw-value" id="prob2">--</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Actual vs Predicted Comparison</h3>
+            <div class="raw-value" id="actualCode">--</div>
+            <div class="raw-value" id="matchStatus">--</div>
+        </div>
+
+        <div class="card">
+            <h3>Current Sensor Inputs to XGBoost</h3>
+            <div id="sensorInputs" style="font-family: monospace; font-size: 14px;"></div>
+        </div>
+
+        <div class="card">
+            <h3>Prediction History with Raw Values</h3>
+            <div style="max-height: 300px; overflow-y: auto;">
+                <table>
+                    <thead>
+                        <tr><th>Time</th><th>Actual</th><th>Predicted</th><th>Confidence</th><th>Prob Class 0</th><th>Prob Class 2</th><th>Match</th></tr>
+                    </thead>
+                    <tbody id="historyBody"><tr><td colspan="7">Loading...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDtRt9ojUqjJX9ItczqH8ZaouFsSCwyhCQ",
+            authDomain: "ecosphere-434df.firebaseapp.com",
+            databaseURL: "https://ecosphere-434df-default-rtdb.firebaseio.com",
+            projectId: "ecosphere-434df",
+            storageBucket: "ecosphere-434df.appspot.com",
+            messagingSenderId: "337466379916",
+            appId: "1:337466379916:web:42541d8d9e5884a8e8f5a9"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Display raw prediction outputs
+        db.ref('xgboost/predictions/latest').on('value', (snap) => {
+            const p = snap.val();
+            if (p) {
+                const predCode = p.predicted?.code;
+                const confidence = p.predicted?.confidence || 0;
+                const probClass0 = p.predicted?.confidence || 0;
+                const probClass2 = 1 - probClass0;
+                const actualCode = p.actual?.code;
+                const match = p.match === 'Yes';
+
+                document.getElementById('predCode').innerHTML = predCode;
+                document.getElementById('confidenceScore').innerHTML = confidence.toFixed(6);
+                document.getElementById('confidencePercent').innerHTML = (confidence * 100).toFixed(4) + '%';
+                document.getElementById('prob0').innerHTML = probClass0.toFixed(6) + ' (' + (probClass0 * 100).toFixed(4) + '%)';
+                document.getElementById('prob2').innerHTML = probClass2.toFixed(6) + ' (' + (probClass2 * 100).toFixed(4) + '%)';
+                document.getElementById('prob0Fill').style.width = (probClass0 * 100) + '%';
+                document.getElementById('prob0Fill').innerHTML = (probClass0 * 100).toFixed(2) + '%';
+                document.getElementById('prob2Fill').style.width = (probClass2 * 100) + '%';
+                document.getElementById('prob2Fill').innerHTML = (probClass2 * 100).toFixed(2) + '%';
+                document.getElementById('actualCode').innerHTML = 'Actual: ' + actualCode;
+                document.getElementById('matchStatus').innerHTML = match ? 'MATCH: Yes' : 'MATCH: No';
+            }
+        });
+
+        // Display sensor inputs
+        db.ref('air_quality/live').on('value', (snap) => {
+            const d = snap.val();
+            if (d) {
+                document.getElementById('sensorInputs').innerHTML = `
+                    temperature: ${d.temperature?.toFixed(2)} C<br>
+                    humidity: ${d.humidity?.toFixed(2)} %<br>
+                    pm25: ${d.pm25?.toFixed(2)} ug/m3<br>
+                    pm10: ${d.pm10?.toFixed(2)} ug/m3<br>
+                    mq2_adc: ${d.mq2_adc}<br>
+                    mq7_adc: ${d.mq7_adc}<br>
+                    mq8_adc: ${d.mq8_adc}
+                `;
+            }
+        });
+
+        // History with raw probabilities
+        const today = new Date();
+        const historyPath = `xgboost/predictions/history/${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
+
+        db.ref(historyPath).on('value', (snap) => {
+            const history = [];
+            snap.forEach(child => history.push(child.val()));
+            history.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+            const recent = history.slice(0, 20);
+
+            const tbody = document.getElementById('historyBody');
+            if (recent.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7">No predictions yet</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = recent.map(h => {
+                const conf = h.predicted?.confidence || 0;
+                const prob0 = conf;
+                const prob2 = 1 - conf;
+                return `
+                    <tr>
+                        <td>${new Date(h.timestamp).toLocaleTimeString()}</td>
+                        <td>${h.actual?.code}</td>
+                        <td>${h.predicted?.code}</td>
+                        <td>${(conf * 100).toFixed(2)}%</td>
+                        <td>${prob0.toFixed(4)}</td>
+                        <td>${prob2.toFixed(4)}</td>
+                        <td>${h.match === 'Yes' ? 'Yes' : 'No'}</td>
+                    </tr>
+                `;
+            }).join('');
+        });
+    </script>
+</body>
+</html>

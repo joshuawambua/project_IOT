@@ -1,0 +1,29 @@
+# 🔐 Firebase admin keys (CRITICAL)
+*firebase-adminsdk*.json
+
+# General sensitive JSON
+*key*.json
+*secret*.json
+*credentials*.json
+serviceAccount*.json
+
+# Environment files
+.env
+
+# Node / web
+node_modules/
+
+# Logs
+*.log
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+*.swp
+
+# Office temporary files
+~$*.pptx
+~$*.docx

@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>XGBoost Air Quality Dashboard</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0a0f1e;
+            color: #eef2ff;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+        .card h3 {
+            color: #38bdf8;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+        }
+        .sensor-item {
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .sensor-label {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+        .sensor-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-top: 5px;
+            font-family: monospace;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #38bdf8;
+            font-family: monospace;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 5px;
+        }
+        .prediction-box {
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            background: #0f172a;
+        }
+        .prediction-number {
+            font-size: 72px;
+            font-weight: bold;
+            font-family: monospace;
+            color: #38bdf8;
+        }
+        .confidence-bar-container {
+            background: #334155;
+            border-radius: 10px;
+            height: 30px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+        .confidence-fill {
+            background: #38bdf8;
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s;
+            line-height: 30px;
+            color: #0a0f1e;
+            font-weight: bold;
+            text-align: right;
+            padding-right: 10px;
+            font-family: monospace;
+        }
+        .match-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin-left: 10px;
+            font-size: 14px;
+        }
+        .match-true {
+            background: #064e3b;
+            color: #10b981;
+        }
+        .match-false {
+            background: #7f1d1d;
+            color: #ef4444;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+        th {
+            color: #94a3b8;
+            font-weight: normal;
+        }
+        .code-good {
+            color: #10b981;
+        }
+        .code-moderate {
+            color: #f59e0b;
+        }
+        .info-text {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 5px;
+        }
+        hr {
+            border-color: #334155;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>XGBoost Air Quality Dashboard</h1>
+        <div class="subtitle">Numerical Values - Quality Code: 0 = GOOD, 2 = MODERATE</div>
+
+        <!-- Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalP">--</div>
+                <div class="stat-label">Total Predictions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="correctP">--</div>
+                <div class="stat-label">Correct Predictions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="accuracy">--</div>
+                <div class="stat-label">Accuracy (Percent)</div>
+            </div>
+        </div>
+
+        <!-- Sensor Readings -->
+        <div class="card">
+            <h3>Current Sensor Readings from ESP32</h3>
+            <div class="sensor-grid">
+                <div class="sensor-item">
+                    <div class="sensor-label">Temperature (Celsius)</div>
+                    <div class="sensor-value" id="temp">--</div>
+                </div>
+                <div class="sensor-item">
+                    <div class="sensor-label">Humidity (Percent)</div>
+                    <div class="sensor-value" id="hum">--</div>
+                </div>
+                <div class="sensor-item">
+                    <div class="sensor-label">PM2.5 (ug/m3)</div>
+                    <div class="sensor-value" id="pm25">--</div>
+                </div>
+                <div class="sensor-item">
+                    <div class="sensor-label">PM10 (ug/m3)</div>
+                    <div class="sensor-value" id="pm10">--</div>
+                </div>
+                <div class="sensor-item">
+                    <div class="sensor-label">MQ7 Carbon Monoxide (ADC)</div>
+                    <div class="sensor-value" id="mq7">--</div>
+                </div>
+                <div class="sensor-item">
+                    <div class="sensor-label">MQ2 Combustible Gas (ADC)</div>
+                    <div class="sensor-value" id="mq2">--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- XGBoost Prediction -->
+        <div class="card">
+            <h3>XGBoost Model Prediction</h3>
+            <div class="prediction-box">
+                <div class="info-text">Predicted Quality Code</div>
+                <div class="prediction-number" id="predCode">--</div>
+                <div style="margin: 10px 0;">
+                    <span id="predLabel"></span>
+                    <span class="match-badge" id="matchBadge"></span>
+                </div>
+                <hr>
+                <div class="info-text">Confidence Level</div>
+                <div class="confidence-bar-container">
+                    <div class="confidence-fill" id="confFill" style="width: 0%">0%</div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <div class="info-text">Actual Quality Code: <strong id="actualCode">--</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prediction History -->
+        <div class="card">
+            <h3>Prediction History</h3>
+            <div style="max-height: 300px; overflow-y: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Actual Code</th>
+                            <th>Predicted Code</th>
+                            <th>Match</th>
+                            <th>Confidence (Percent)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr><td colspan="5">Loading predictions...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDtRt9ojUqjJX9ItczqH8ZaouFsSCwyhCQ",
+            authDomain: "ecosphere-434df.firebaseapp.com",
+            databaseURL: "https://ecosphere-434df-default-rtdb.firebaseio.com",
+            projectId: "ecosphere-434df",
+            storageBucket: "ecosphere-434df.appspot.com",
+            messagingSenderId: "337466379916",
+            appId: "1:337466379916:web:42541d8d9e5884a8e8f5a9"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Update sensor readings
+        db.ref('air_quality/live').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                document.getElementById('temp').innerHTML = data.temperature?.toFixed(1) || '--';
+                document.getElementById('hum').innerHTML = data.humidity?.toFixed(0) || '--';
+                document.getElementById('pm25').innerHTML = data.pm25?.toFixed(0) || '--';
+                document.getElementById('pm10').innerHTML = data.pm10?.toFixed(0) || '--';
+                document.getElementById('mq7').innerHTML = data.mq7_adc || '--';
+                document.getElementById('mq2').innerHTML = data.mq2_adc || '--';
+            }
+        });
+
+        // Update prediction
+        db.ref('xgboost/predictions/latest').on('value', (snapshot) => {
+            const prediction = snapshot.val();
+            if (prediction) {
+                const predictedCode = prediction.predicted?.code;
+                const actualCode = prediction.actual?.code;
+                const confidence = (prediction.predicted?.confidence || 0) * 100;
+                const match = prediction.match === 'Yes';
+
+                document.getElementById('predCode').innerHTML = predictedCode;
+
+                let labelText = '';
+                if (predictedCode === 0) labelText = '(GOOD)';
+                else if (predictedCode === 2) labelText = '(MODERATE)';
+                document.getElementById('predLabel').innerHTML = labelText;
+
+                let actualText = actualCode;
+                if (actualCode === 0) actualText += ' (GOOD)';
+                else if (actualCode === 2) actualText += ' (MODERATE)';
+                document.getElementById('actualCode').innerHTML = actualText;
+
+                document.getElementById('confFill').style.width = confidence + '%';
+                document.getElementById('confFill').innerHTML = confidence.toFixed(1) + '%';
+
+                const badge = document.getElementById('matchBadge');
+                if (match) {
+                    badge.innerHTML = 'MATCH';
+                    badge.className = 'match-badge match-true';
+                } else {
+                    badge.innerHTML = 'MISMATCH';
+                    badge.className = 'match-badge match-false';
+                }
+            }
+        });
+
+        // Update statistics
+        db.ref('xgboost/stats').on('value', (snapshot) => {
+            const stats = snapshot.val();
+            if (stats) {
+                document.getElementById('totalP').innerHTML = stats.total || 0;
+                document.getElementById('correctP').innerHTML = stats.correct || 0;
+                const accuracy = stats.total > 0 ? ((stats.correct / stats.total) * 100).toFixed(1) : 0;
+                document.getElementById('accuracy').innerHTML = accuracy;
+            }
+        });
+
+        // Update history table
+        const today = new Date();
+        const historyPath = `xgboost/predictions/history/${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
+
+        db.ref(historyPath).on('value', (snapshot) => {
+            const historyItems = [];
+            snapshot.forEach(child => historyItems.push(child.val()));
+
+            historyItems.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            const recentItems = historyItems.slice(0, 20);
+
+            const tbody = document.getElementById('historyBody');
+            if (recentItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">No predictions yet</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = recentItems.map(item => {
+                const actualCode = item.actual?.code;
+                const predictedCode = item.predicted?.code;
+                const matchText = item.match === 'Yes' ? 'Yes' : 'No';
+                const confidence = ((item.predicted?.confidence || 0) * 100).toFixed(1);
+                const actualClass = actualCode === 0 ? 'code-good' : 'code-moderate';
+                const predictedClass = predictedCode === 0 ? 'code-good' : 'code-moderate';
+
+                return `
+                    <tr>
+                        <td>${new Date(item.timestamp).toLocaleTimeString()}</td>
+                        <td class="${actualClass}">${actualCode} (${item.actual?.label})</td>
+                        <td class="${predictedClass}">${predictedCode} (${item.predicted?.label})</td>
+                        <td>${matchText}</td>
+                        <td>${confidence}%</td>
+                    </tr>
+                `;
+            }).join('');
+        });
+    </script>
+</body>
+</html>

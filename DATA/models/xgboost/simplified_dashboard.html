@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>XGBoost Test</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+</head>
+<body>
+    <h1>XGBoost Predictions</h1>
+    <div id="data">Loading...</div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDtRt9ojUqjJX9ItczqH8ZaouFsSCwyhCQ",
+            authDomain: "ecosphere-434df.firebaseapp.com",
+            databaseURL: "https://ecosphere-434df-default-rtdb.firebaseio.com",
+            projectId: "ecosphere-434df",
+            storageBucket: "ecosphere-434df.appspot.com",
+            messagingSenderId: "337466379916",
+            appId: "1:337466379916:web:42541d8d9e5884a8e8f5a9"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        db.ref('xgboost/predictions/latest').on('value', (snapshot) => {
+            const data = snapshot.val();
+            document.getElementById('data').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Air Quality Dashboard</title>
+</head>
+<body>
+
+<h2>Real-Time Air Quality</h2>
+
+<p>Predicted PM2.5: <span id="pm25">--</span></p>
+<p>Status: <span id="status">--</span></p>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    databaseURL: "https://YOUR_PROJECT.firebaseio.com/"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// READ PREDICTIONS
+const predRef = ref(db, "predictions");
+
+onValue(predRef, (snapshot) => {
+    const data = snapshot.val();
+
+    document.getElementById("pm25").innerText = data.pm25_predicted.toFixed(2);
+    document.getElementById("status").innerText = data.status;
+
+    // COLOR LOGIC
+    if (data.status === "DANGEROUS") {
+        document.body.style.backgroundColor = "red";
+    } else if (data.status === "WARNING") {
+        document.body.style.backgroundColor = "orange";
+    } else {
+        document.body.style.backgroundColor = "lightgreen";
+    }
+});
+</script>
+
+</body>
+</html>

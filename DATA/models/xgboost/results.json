@@ -1,0 +1,16 @@
+{
+  "train_acc": 0.9997945269449893,
+  "test_acc": 0.9993275552898984,
+  "original_classes": [
+    0,
+    2
+  ],
+  "encoded_classes": [
+    0,
+    1
+  ],
+  "mapping": {
+    "0": 0,
+    "2": 1
+  }
+}

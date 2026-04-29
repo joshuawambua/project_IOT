@@ -1,0 +1,68 @@
+{
+  "model_type": "Random Forest Regressor",
+  "targets": [
+    "pm25",
+    "pm10",
+    "co",
+    "lpg",
+    "hydrogen"
+  ],
+  "features_count": 38,
+  "training_samples": 53527,
+  "testing_samples": 13382,
+  "hyperparameters": {
+    "n_estimators": 100,
+    "max_depth": 15,
+    "min_samples_split": 10,
+    "min_samples_leaf": 5,
+    "max_features": "sqrt"
+  },
+  "metrics": {
+    "pm25": {
+      "model": "Random Forest",
+      "train_mae": 3.053247687933505,
+      "train_rmse": 7.435856026414639,
+      "train_r2": 0.9958467770224807,
+      "test_mae": 4.110032192713789,
+      "test_rmse": 8.743258235565472,
+      "test_r2": 0.9873275828379318
+    },
+    "pm10": {
+      "model": "Random Forest",
+      "train_mae": 5.270650076995392,
+      "train_rmse": 14.204379088991708,
+      "train_r2": 0.9892967559397333,
+      "test_mae": 6.480156054688414,
+      "test_rmse": 17.7238109032226,
+      "test_r2": 0.9637883577020231
+    },
+    "co": {
+      "model": "Random Forest",
+      "train_mae": 0.010767201517556937,
+      "train_rmse": 0.017468188651365724,
+      "train_r2": 0.9827592474165003,
+      "test_mae": 0.01986023940662528,
+      "test_rmse": 0.02996944738931225,
+      "test_r2": 0.9470034964010576
+    },
+    "lpg": {
+      "model": "Random Forest",
+      "train_mae": 0.014919791118171337,
+      "train_rmse": 0.02227397272661246,
+      "train_r2": 0.7977847228069488,
+      "test_mae": 0.02392305986946054,
+      "test_rmse": 0.029970643942724754,
+      "test_r2": 0.43227789122382754
+    },
+    "hydrogen": {
+      "model": "Random Forest",
+      "train_mae": 0.014153095113571719,
+      "train_rmse": 0.02039289905404623,
+      "train_r2": 0.7626716023308077,
+      "test_mae": 0.038527958781434155,
+      "test_rmse": 0.04425719180259672,
+      "test_r2": -1.8554813444999527
+    }
+  },
+  "timestamp": "2026-04-28T21:52:23.696602"
+}

@@ -1,0 +1,52 @@
+{
+  "model_type": "Isolation Forest",
+  "contamination": 0.05,
+  "n_estimators": 100,
+  "total_samples": 66917,
+  "normal_samples": 63571,
+  "anomaly_samples": 3346,
+  "anomaly_percentage": 5.000224158285638,
+  "features_used": [
+    "pm25",
+    "pm10",
+    "co",
+    "lpg",
+    "hydrogen",
+    "temperature",
+    "humidity",
+    "pm25_pm10_ratio",
+    "temp_humidity_product",
+    "total_pollution",
+    "pm25_change",
+    "co_change",
+    "is_night"
+  ],
+  "anomaly_statistics": {
+    "pm25": {
+      "normal_mean": 214.00701577763445,
+      "anomaly_mean": 355.7570233114166,
+      "ratio": 1.6623537301568498
+    },
+    "pm10": {
+      "normal_mean": 236.28122886221706,
+      "anomaly_mean": 448.1539151225344,
+      "ratio": 1.8966890454714043
+    },
+    "co": {
+      "normal_mean": 0.6213213886835193,
+      "anomaly_mean": 0.6315528989838614,
+      "ratio": 1.014833991677308
+    },
+    "lpg": {
+      "normal_mean": 0.45934496861776597,
+      "anomaly_mean": 0.4657842199641363,
+      "ratio": 1.011815598555801
+    },
+    "hydrogen": {
+      "normal_mean": 0.344237356656337,
+      "anomaly_mean": 0.34316407650926484,
+      "ratio": 0.9939946239678344
+    }
+  },
+  "timestamp": "2026-04-28T22:05:58.398056"
+}
