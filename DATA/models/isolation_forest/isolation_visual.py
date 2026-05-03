@@ -269,7 +269,7 @@ with open('model_comparison_all.json', 'w') as f:
 print("Updated: model_comparison_all.json")
 
 # Final summary
-print("\n" + "="*60)
+# print("\n" + "="*60)
 print("ISOLATION FOREST ANOMALY DETECTION COMPLETE!")
 print("="*60)
 

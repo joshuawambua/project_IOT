@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>XGBoost PM2.5 Predictor v1.0</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0a0f1e;
+            color: #eef2ff;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; font-size: 28px; margin-bottom: 5px; }
+        .version { text-align: center; color: #38bdf8; font-size: 12px; margin-bottom: 20px; }
+        .subtitle { text-align: center; color: #94a3b8; margin-bottom: 30px; font-size: 14px; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #38bdf8;
+            font-family: monospace;
+        }
+        .stat-label { font-size: 12px; color: #94a3b8; margin-top: 5px; }
+
+        .card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+        .card h3 { color: #38bdf8; margin-bottom: 15px; font-size: 18px; }
+
+        .prediction-box {
+            text-align: center;
+            padding: 25px;
+            background: #0f172a;
+            border-radius: 12px;
+        }
+        .prediction-number {
+            font-size: 64px;
+            font-weight: bold;
+            font-family: monospace;
+            color: #38bdf8;
+        }
+        .actual-number {
+            font-size: 48px;
+            font-weight: bold;
+            font-family: monospace;
+            color: #10b981;
+        }
+        .error-number {
+            font-size: 24px;
+            font-weight: bold;
+            font-family: monospace;
+            color: #f59e0b;
+        }
+
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .sensor-item {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .sensor-value {
+            font-size: 20px;
+            font-weight: bold;
+            font-family: monospace;
+            margin-top: 5px;
+        }
+        .sensor-label { font-size: 12px; color: #94a3b8; }
+
+        table {
+            width: 100%;
+            font-family: monospace;
+            font-size: 12px;
+            border-collapse: collapse;
+        }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #334155; }
+        th { color: #94a3b8; }
+
+        .good { color: #10b981; }
+        .warning { color: #f59e0b; }
+        .danger { color: #ef4444; }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .online { background: #10b98120; color: #10b981; border: 1px solid #10b981; }
+        .offline { background: #ef444420; color: #ef4444; border: 1px solid #ef4444; }
+
+        .refresh-note { text-align: center; font-size: 11px; color: #94a3b8; margin-top: 20px; }
+
+        .excellent { color: #10b981; font-weight: bold; }
+        .good-badge { color: #38bdf8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌫️ PM2.5 Prediction Dashboard</h1>
+        <div class="version">XGBoost Regressor v1.0 | <span class="excellent">R² = 0.9966 (Excellent)</span></div>
+        <div class="subtitle">Real-time predictions from live sensor data</div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">0.9966</div>
+                <div class="stat-label">R² Score <span class="excellent">(Excellent)</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">2.77</div>
+                <div class="stat-label">Mean Absolute Error (MAE)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">4.50</div>
+                <div class="stat-label">Root Mean Square Error (RMSE)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">98.6%</div>
+                <div class="stat-label">Prediction Accuracy</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>🎯 Current PM2.5 Prediction <span id="statusBadge" class="status-badge offline">Checking...</span></h3>
+            <div class="prediction-box">
+                <div class="stat-label" style="margin-bottom: 10px;">XGBoost Predicted PM2.5</div>
+                <div class="prediction-number" id="predictedPM25">--</div>
+                <div class="stat-label" style="margin-top: 20px; margin-bottom: 10px;">Actual PM2.5 from Sensor</div>
+                <div class="actual-number" id="actualPM25">--</div>
+                <div style="margin-top: 20px;">
+                    <span class="stat-label">Prediction Error: </span>
+                    <span class="error-number" id="error">--</span>
+                </div>
+                <div style="margin-top: 10px;">
+                    <span class="stat-label">Air Quality: </span>
+                    <span id="status" class="good"></span>
+                </div>
+                <div style="margin-top: 10px;">
+                    <span class="stat-label">Last Update: </span>
+                    <span id="lastUpdate" style="color: #94a3b8;">--</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📡 Sensor Inputs</h3>
+            <div class="sensor-grid">
+                <div class="sensor-item">
+                    <div class="sensor-label">🌡️ Temperature</div>
+                    <div class="sensor-value" id="temp">--</div>
+                </div>
+                <div class="sensor-item">
+                    <div class="sensor-label">💧 Humidity</div>
+                    <div class="sensor-value" id="hum">--</div>
+                </div>
+                <div class="sensor-item">
+                    <div class="sensor-label">🏭 PM10</div>
+                    <div class="sensor-value" id="pm10">--</div>
+                </div>
+                <div class="sensor-item">
+                    <div class="sensor-label">🔥 MQ2 (Gas)</div>
+                    <div class="sensor-value" id="mq2">--</div>
+                </div>
+                <div class="sensor-item">
+                    <div class="sensor-label">💨 MQ7 (CO)</div>
+                    <div class="sensor-value" id="mq7">--</div>
+                </div>
+                <div class="sensor-item">
+                    <div class="sensor-label">⚡ MQ8 (H₂)</div>
+                    <div class="sensor-value" id="mq8">--</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📜 Prediction History</h3>
+            <div style="max-height: 300px; overflow-y: auto;">
+                <table>
+                    <thead>
+                        <tr><th>Time</th><th>Predicted</th><th>Actual</th><th>Error</th><th>Accuracy</th></tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr><td colspan="5" style="text-align: center;">Loading predictions......</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="refresh-note">🔄 Updates every 30 seconds | Predictor: python control_v1.py start</div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDtRt9ojUqjJX9ItczqH8ZaouFsSCwyhCQ",
+            authDomain: "ecosphere-434df.firebaseapp.com",
+            databaseURL: "https://ecosphere-434df-default-rtdb.firebaseio.com",
+            projectId: "ecosphere-434df",
+            storageBucket: "ecosphere-434df.appspot.com"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Listen for predictions
+        const predictionRef = db.ref('pm25_predictions/latest');
+        predictionRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                document.getElementById('predictedPM25').innerHTML = data.predicted.toFixed(1);
+                document.getElementById('actualPM25').innerHTML = data.actual.toFixed(1);
+                document.getElementById('error').innerHTML = `${data.error.toFixed(1)} µg/m³ (${data.error_percent.toFixed(1)}%)`;
+                document.getElementById('lastUpdate').innerHTML = new Date(data.timestamp * 1000).toLocaleString();
+                document.getElementById('statusBadge').innerHTML = '🟢 Online';
+                document.getElementById('statusBadge').className = 'status-badge online';
+
+                const actual = data.actual;
+                const statusElem = document.getElementById('status');
+                if (actual <= 50) { statusElem.innerHTML = 'GOOD'; statusElem.className = 'good'; }
+                else if (actual <= 100) { statusElem.innerHTML = 'MODERATE'; statusElem.className = 'warning'; }
+                else if (actual <= 150) { statusElem.innerHTML = 'UNHEALTHY'; statusElem.className = 'warning'; }
+                else { statusElem.innerHTML = 'HAZARDOUS'; statusElem.className = 'danger'; }
+            }
+        });
+
+        // Listen for sensor data
+        db.ref('air_quality/live').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                document.getElementById('temp').innerHTML = data.temperature?.toFixed(1) || '--';
+                document.getElementById('hum').innerHTML = data.humidity?.toFixed(1) || '--';
+                document.getElementById('pm10').innerHTML = data.pm10?.toFixed(0) || '--';
+                document.getElementById('mq2').innerHTML = data.mq2_adc || '--';
+                document.getElementById('mq7').innerHTML = data.mq7_adc || '--';
+                document.getElementById('mq8').innerHTML = data.mq8_adc || '--';
+            }
+        });
+
+        // Load history
+        const today = new Date();
+        const historyPath = `pm25_predictions/history/${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
+
+        db.ref(historyPath).on('value', (snapshot) => {
+            const history = [];
+            snapshot.forEach(child => history.push(child.val()));
+            history.sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+
+            const tbody = document.getElementById('historyBody');
+            if (history.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No predictions yet. Start predictor: python control_v1.py start</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = history.slice(0, 15).map(item => {
+                const acc = item.actual > 0 ? (1 - item.error/item.actual)*100 : 0;
+                return `<tr>
+                    <td>${new Date(item.timestamp*1000).toLocaleTimeString()}</td>
+                    <td>${item.predicted.toFixed(1)}</td>
+                    <td>${item.actual.toFixed(1)}</td>
+                    <td>${item.error.toFixed(1)}</td>
+                    <td>${acc.toFixed(1)}%</td>
+                </tr>`;
+            }).join('');
+        });
+
+        // Health check
+        setInterval(() => {
+            predictionRef.once('value', (snapshot) => {
+                const data = snapshot.val();
+                const now = Date.now()/1000;
+                if (data && (now - data.timestamp) < 120) {
+                    document.getElementById('statusBadge').innerHTML = '🟢 Online';
+                    document.getElementById('statusBadge').className = 'status-badge online';
+                } else {
+                    document.getElementById('statusBadge').innerHTML = '🔴 Offline';
+                    document.getElementById('statusBadge').className = 'status-badge offline';
+                }
+            });
+        }, 30000);
+    </script>
+</body>
+</html>

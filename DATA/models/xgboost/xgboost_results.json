@@ -1,68 +1,35 @@
 {
-  "model_type": "XGBoost Regressor",
-  "targets": [
-    "pm25",
+  "model": "XGBoost",
+  "train_mae": 1.120585398399706,
+  "train_rmse": 1.6566333747283428,
+  "train_r2": 0.9997938515617283,
+  "test_mae": 2.433345864375349,
+  "test_rmse": 4.528809677964094,
+  "test_r2": 0.9965999837742116,
+  "features": [
+    "temperature",
+    "humidity",
     "pm10",
-    "co",
-    "lpg",
-    "hydrogen"
+    "mq2_adc",
+    "mq7_adc",
+    "mq8_adc",
+    "pm25_lag_1",
+    "pm25_lag_2",
+    "pm25_lag_3",
+    "pm10_lag_1",
+    "pm10_lag_2",
+    "pm10_lag_3",
+    "mq7_lag_1",
+    "mq7_lag_2",
+    "mq7_lag_3",
+    "pm25_rolling_mean_5",
+    "pm25_rolling_mean_10",
+    "pm10_rolling_mean_5",
+    "hour",
+    "day_of_week",
+    "is_weekend",
+    "pm25_rate",
+    "temp_rate"
   ],
-  "features_count": 38,
-  "training_samples": 53527,
-  "testing_samples": 13382,
-  "hyperparameters": {
-    "n_estimators": 100,
-    "max_depth": 8,
-    "learning_rate": 0.1,
-    "subsample": 0.8,
-    "colsample_bytree": 0.8
-  },
-  "metrics": {
-    "pm25": {
-      "model": "XGBoost",
-      "train_mae": 0.860603436462139,
-      "train_rmse": 1.2663750960315563,
-      "train_r2": 0.9998795385667845,
-      "test_mae": 1.4087860109987431,
-      "test_rmse": 3.862556242314638,
-      "test_r2": 0.9975267815245608
-    },
-    "pm10": {
-      "model": "XGBoost",
-      "train_mae": 3.137755883814145,
-      "train_rmse": 6.542859630400433,
-      "train_r2": 0.9977290575625778,
-      "test_mae": 4.60668730019561,
-      "test_rmse": 14.270221383913515,
-      "test_r2": 0.9765255499080491
-    },
-    "co": {
-      "model": "XGBoost",
-      "train_mae": 0.0016006396245918117,
-      "train_rmse": 0.002302371523195896,
-      "train_r2": 0.9997004900307416,
-      "test_mae": 0.003381939202177384,
-      "test_rmse": 0.009006267575104141,
-      "test_r2": 0.995213925664575
-    },
-    "lpg": {
-      "model": "XGBoost",
-      "train_mae": 0.015344223450974762,
-      "train_rmse": 0.02185808396278879,
-      "train_r2": 0.8052655556456443,
-      "test_mae": 0.02347577082054299,
-      "test_rmse": 0.02995697925698033,
-      "test_r2": 0.4327954627318167
-    },
-    "hydrogen": {
-      "model": "XGBoost",
-      "train_mae": 0.014297339449520878,
-      "train_rmse": 0.01970991436256755,
-      "train_r2": 0.7783022717933061,
-      "test_mae": 0.037437646797608054,
-      "test_rmse": 0.04343908688986651,
-      "test_r2": -1.7508885455064873
-    }
-  },
-  "timestamp": "2026-04-28T21:59:23.196893"
+  "n_features": 23
 }

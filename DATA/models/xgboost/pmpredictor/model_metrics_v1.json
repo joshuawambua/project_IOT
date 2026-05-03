@@ -1,0 +1,30 @@
+{
+  "model_version": "1.0",
+  "train_mae": 1.7719066288411849,
+  "train_rmse": 2.7801031601244413,
+  "train_r2": 0.9994194373947843,
+  "test_mae": 2.7704199133316973,
+  "test_rmse": 4.5011609841662175,
+  "test_r2": 0.9966413717139291,
+  "n_features": 18,
+  "features": [
+    "temperature",
+    "humidity",
+    "pm10",
+    "mq2_adc",
+    "mq7_adc",
+    "mq8_adc",
+    "pm25_lag1",
+    "pm25_lag2",
+    "pm25_lag3",
+    "pm10_lag1",
+    "temp_lag1",
+    "hum_lag1",
+    "pm25_roll5",
+    "pm25_roll10",
+    "pm25_rate",
+    "hour",
+    "day_of_week",
+    "is_weekend"
+  ]
+}
